@@ -80,27 +80,45 @@ Flags: short labels like Urgency tactics, Suspicious sender domain, Requests sen
         max_tokens=1024,
     )
     raw = response.choices[0].message.content.strip()
-    # Extract JSON object regardless of extra text
     start = raw.find("{")
     end = raw.rfind("}") + 1
     if start != -1 and end > start:
         raw = raw[start:end]
     return json.loads(raw)
 
+# ── UI ────────────────────────────────────────────────────────────────────────
 st.title("🔍 Phishing Email Analyzer")
 st.markdown("Paste a suspicious email below to detect phishing indicators and get an AI-powered risk score.")
 st.divider()
 
-with st.expander("⚙️ API Key Settings"):
-    api_key = st.text_input("Groq API Key", type="password", placeholder="gsk_...", help="Get your free key at console.groq.com")
-    st.caption("Your key is never stored — it's only used for this session.")
+# ── API Key — auto-load from secrets, fallback to manual input ────────────────
+api_key = st.secrets.get("GROQ_API_KEY", "") if hasattr(st, "secrets") else ""
 
+if not api_key:
+    with st.expander("⚙️ API Key Settings"):
+        api_key = st.text_input(
+            "Groq API Key",
+            type="password",
+            placeholder="gsk_...",
+            help="Get your free key at console.groq.com"
+        )
+        st.caption("Your key is never stored — it's only used for this session.")
+else:
+    st.success("🔑 API key loaded automatically.", icon="✅")
+
+# ── Email input ───────────────────────────────────────────────────────────────
 col1, col2 = st.columns([3, 1])
 with col2:
     if st.button("Load sample email", use_container_width=True):
         st.session_state["email_input"] = SAMPLE_EMAIL
 
-email_text = st.text_area("Email content", value=st.session_state.get("email_input", ""), placeholder="Paste the full email here (subject, sender, body, links...)", height=220, key="email_input")
+email_text = st.text_area(
+    "Email content",
+    value=st.session_state.get("email_input", ""),
+    placeholder="Paste the full email here (subject, sender, body, links...)",
+    height=220,
+    key="email_input"
+)
 
 analyze_clicked = st.button("🔎 Analyze Email", type="primary", use_container_width=True)
 
